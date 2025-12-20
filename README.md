@@ -46,6 +46,13 @@ To use the graphical interface:
    streamlit run src/app.py
    ```
 
+### Default Mode (No API Key)
+If you don't provide an API key, the app runs in **Offline Mode**:
+- **Cities**: Limited to Paris, Tokyo, and New York.
+- **Data**: Uses pre-loaded mock data instead of live AI results.
+- **Accommodation**: AI suggestions for hotels are disabled.
+if you want api key mail me
+
 ### Using AI Features (Optional)
 
 To enable planning for **any city** using real-time AI data:
