@@ -12,7 +12,7 @@ def main():
     parser.add_argument('--prefs', type=str, help='Comma separated preferences')
     
     args = parser.parse_args()
-
+    
     # Inputs
     try:
         if args.city and args.days and args.budget:
