@@ -1,9 +1,15 @@
 import streamlit as st
 import time
 import os
+import sys
 from dotenv import load_dotenv
+
+# Add project root to python path to allow absolute imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.planner import TravelPlanner
 from src.groq_client import GroqClient
+from src.data import get_hotels_for_city
 
 load_dotenv()
 
@@ -142,6 +148,21 @@ with st.sidebar:
     else:
         city = st.selectbox("Select City", ["Paris", "Tokyo", "New York"])
         
+    # Hotel Selection
+    available_hotels = get_hotels_for_city(city)
+    selected_hotel = None
+    
+    if available_hotels:
+        st.subheader("Accommodation")
+        # Create options with price
+        hotel_map = {f"{h.name} - ₹{h.cost_per_night}/night": h for h in available_hotels}
+        options = ["Let AI Decide"] + list(hotel_map.keys())
+        
+        selection = st.selectbox("Choose Hotel", options)
+        
+        if selection != "Let AI Decide":
+            selected_hotel = hotel_map[selection]
+
     days = st.slider("Number of Days", min_value=1, max_value=7, value=3)
     budget = st.number_input("Total Budget (₹)", min_value=1000, value=20000, step=1000)
     
@@ -176,10 +197,14 @@ if plan_button:
             client = GroqClient(api_key)
             
             # 1. Fetch Accommodation
-            with st.spinner(f'Finding accommodation in {city}...'):
-                # Estimate 40% of budget for accommodation
-                target_nightly_rate = (budget * 0.4) / days
-                accommodation = client.fetch_accommodation(city, target_nightly_rate)
+            if selected_hotel:
+                accommodation = selected_hotel
+                log_callback(f"Using selected accommodation: {accommodation.name}")
+            else:
+                with st.spinner(f'Finding accommodation in {city}...'):
+                    # Estimate 40% of budget for accommodation
+                    target_nightly_rate = (budget * 0.4) / days
+                    accommodation = client.fetch_accommodation(city, target_nightly_rate)
                 
             # 2. Fetch Activities
             with st.spinner(f'Fetching activities for {city} using Groq (Llama 3)...'):
@@ -188,6 +213,10 @@ if plan_button:
                 if not custom_activities:
                     st.error("Failed to fetch activities. Please check your API key and try again.")
                     st.stop()
+        else:
+            # Fallback if no API key but hotel selected
+            if selected_hotel:
+                accommodation = selected_hotel
         
         with st.spinner('AI Agent is planning your trip...'):
             itinerary = planner.plan_trip(city, days, budget, preferences, on_log=log_callback, custom_activities=custom_activities, accommodation=accommodation)
